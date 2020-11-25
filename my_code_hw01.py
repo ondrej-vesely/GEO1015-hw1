@@ -60,7 +60,7 @@ class Raster:
     self.values = [self.no_data] * self.ncols * self.nrows
     
   @property
-  def coords(self):
+  def centers(self):
     """Cell center coordinates"""
     xulcenter = self.xllcenter + self.cell_size * self.nrows
     for i in range(self.ncols):
@@ -83,9 +83,7 @@ class Raster:
 
 
 def nn_interpolation(list_pts_3d, j_nn):
-    """
-    !!! TO BE COMPLETED !!!
-     
+    """ 
     Function that writes the output raster with nearest neighbour interpolation
      
     Input:
@@ -95,13 +93,6 @@ def nn_interpolation(list_pts_3d, j_nn):
         returns the value of the area
  
     """  
-    # print("cellsize:", j_nn['cellsize'])
-
-    #-- to speed up the nearest neighbour us a kd-tree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
-    # kd = scipy.spatial.KDTree(list_pts)
-    # d, i = kd.query(p, k=1)
 
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_nn['cellsize'])
@@ -110,9 +101,10 @@ def nn_interpolation(list_pts_3d, j_nn):
     list_pts_z = [(z) for x,y,z in list_pts_3d]
     kdtree = scipy.spatial.KDTree(list_pts_2d)
 
-    for i, coord in enumerate(raster.coords):
-        _, index = kdtree.query(coord)
-        raster.values[i] = list_pts_z[index]
+    raster.values = []
+    for coord in raster.centers:
+        _, i = kdtree.query(coord)
+        raster.values.append(list_pts_z[i])
 
     with open(j_nn["output-file"], 'w') as output:
         output.write(raster.to_ascii())
@@ -141,6 +133,39 @@ def idw_interpolation(list_pts_3d, j_idw):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
+
+    bbox = BoundingBox(list_pts_3d)
+    raster = Raster(bbox, j_idw['cellsize'])
+
+    list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
+    list_pts_z = [(z) for x,y,z in list_pts_3d]
+    kdtree = scipy.spatial.KDTree(list_pts_2d)
+
+    raster.values = []
+    for center in raster.centers:
+        # get samples in radius
+        samples = kdtree.query_ball_point(center, 10)
+        coords = [list_pts_2d[i] for i in samples]
+        values = [list_pts_z[i] for i in samples]
+        dists = [math.sqrt( (center[0]-c[0])**2 + (center[1]-c[1])**2 ) 
+                for c in coords]
+        # catch no sample in radius case
+        if not samples:
+            raster.values.append(raster.no_data)
+            continue
+        # catch zero distance case
+        if 0 in dists:
+            i = dists.index(0)
+            raster.values.append(values[i])
+            continue 
+        # otherwise business as usual
+        weights = [1/d for d in dists]
+        weights_norm = [w/sum(weights) for w in weights]
+        result = sum([norm*z for norm, z in zip(weights_norm, values)])
+        raster.values.append(result)
+
+    with open(j_idw["output-file"], 'w') as output:
+        output.write(raster.to_ascii())
     
     print("File written to", j_idw['output-file'])
 
