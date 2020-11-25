@@ -10,7 +10,7 @@
 import math
 import numpy
 import scipy.spatial
-import startin 
+# import startin 
 #-----
 
 
@@ -34,7 +34,6 @@ class BoundingBox:
                 self.maxx = x
             elif y > self.maxy:
                 self.maxy = y
-                
     @property
     def width(self):
         return self.maxx - self.minx
@@ -50,8 +49,8 @@ class Raster:
   """Simple raster based on ESRI ASCII schema"""
   
   def __init__(self, bbox, cell_size, no_data=-9999):
-    self.ncols = bbox.width // cell_size + 1
-    self.nrows = bbox.height // cell_size + 1
+    self.ncols = int(bbox.width // cell_size + 1)
+    self.nrows = int(bbox.height // cell_size + 1)
     self.xllcenter = bbox.minx
     self.yllcenter = bbox.miny
     self.cell_size = cell_size
@@ -60,13 +59,14 @@ class Raster:
     # initialize list of values with no_data
     self.values = [self.no_data] * self.ncols * self.nrows
     
-    # initialize list of pixel center coords
-    self.coords = []
+  @property
+  def coords(self):
+    """Cell center coordinates"""
     for i in range(self.ncols):
       for j in range(self.nrows):
         x = self.xllcenter + i * self.cell_size
         y = self.yllcenter + j * self.cell_size
-        self.coords.append([x,y])
+        yield (x,y)
     
   def to_ascii(self):
     rows = [
@@ -76,7 +76,7 @@ class Raster:
       "YLLCENTER %s" % self.yllcenter,
       "CELLSIZE %s" % self.cell_size,
       "NODATA_VALUE %s" % self.no_data,
-      ' '.join(self.values)
+      ' '.join( (str(x) for x in self.values) )
     ]
     return '\n'.join(rows)
 
@@ -102,9 +102,21 @@ def nn_interpolation(list_pts_3d, j_nn):
     # kd = scipy.spatial.KDTree(list_pts)
     # d, i = kd.query(p, k=1)
 
+    bbox = BoundingBox(list_pts_3d)
+    raster = Raster(bbox, j_nn['cellsize'])
+
+    list_points_2d = [(x,y) for x,y,z in list_pts_3d]
+    list_points_z = [(z) for x,y,z in list_pts_3d]
+    kdtree = scipy.spatial.KDTree(list_points_2d)
+
+    for i, coord in enumerate(raster.coords):
+        _, index = kdtree.query(coord)
+        raster.values[i] = list_points_z[index]
+
+    with open(j_nn["output-file"], 'w') as output:
+        output.write(raster.to_ascii())
+
     print("File written to", j_nn['output-file'])
-
-
 
 
 def idw_interpolation(list_pts_3d, j_idw):
