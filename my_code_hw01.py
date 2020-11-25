@@ -14,6 +14,72 @@ import startin
 #-----
 
 
+class BoundingBox:
+    """A 2D bounding box"""
+    
+    def __init__(self, points):
+        if len(points) == 0:
+            raise ValueError("Can't compute bounding box of empty list")
+        
+        self.minx, self.miny = float("inf"), float("inf")
+        self.maxx, self.maxy = float("-inf"), float("-inf")
+        for x, y, *_ in points:
+            # Set min coords
+            if x < self.minx:
+                self.minx = x
+            if y < self.miny:
+                self.miny = y
+            # Set max coords
+            if x > self.maxx:
+                self.maxx = x
+            elif y > self.maxy:
+                self.maxy = y
+                
+    @property
+    def width(self):
+        return self.maxx - self.minx
+    @property
+    def height(self):
+        return self.maxy - self.miny
+    def __repr__(self):
+        return "BoundingBox(X: {} - {}, Y: {} - {})".format(
+            self.minx, self.maxx, self.miny, self.maxy)
+
+
+class Raster:
+  """Simple raster based on ESRI ASCII schema"""
+  
+  def __init__(self, bbox, cell_size, no_data=-9999):
+    self.ncols = bbox.width // cell_size + 1
+    self.nrows = bbox.height // cell_size + 1
+    self.xllcenter = bbox.minx
+    self.yllcenter = bbox.miny
+    self.cell_size = cell_size
+    self.no_data = no_data
+    
+    # initialize list of values with no_data
+    self.values = [self.no_data] * self.ncols * self.nrows
+    
+    # initialize list of pixel center coords
+    self.coords = []
+    for i in range(self.ncols):
+      for j in range(self.nrows):
+        x = self.xllcenter + i * self.cell_size
+        y = self.yllcenter + j * self.cell_size
+        self.coords.append([x,y])
+    
+  def to_ascii(self):
+    rows = [
+      "NCOLS %d" % self.ncols,
+      "NROWS %d" % self.nrows,
+      "XLLCENTER %s" % self.xllcenter,
+      "YLLCENTER %s" % self.yllcenter,
+      "CELLSIZE %s" % self.cell_size,
+      "NODATA_VALUE %s" % self.no_data,
+      ' '.join(self.values)
+    ]
+    return '\n'.join(rows)
+
 
 def nn_interpolation(list_pts_3d, j_nn):
     """
@@ -37,6 +103,7 @@ def nn_interpolation(list_pts_3d, j_nn):
     # d, i = kd.query(p, k=1)
 
     print("File written to", j_nn['output-file'])
+
 
 
 
