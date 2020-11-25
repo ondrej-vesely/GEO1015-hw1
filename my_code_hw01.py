@@ -1,7 +1,7 @@
 #-- my_code_hw01.py
 #-- hw01 GEO1015.2020
-#-- [YOUR NAME]
-#-- [YOUR STUDENT NUMBER] 
+#-- Guilherme Spinoza Andreo
+#-- 5383994
 #-- [YOUR NAME]
 #-- [YOUR STUDENT NUMBER] 
 
