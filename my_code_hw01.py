@@ -62,9 +62,10 @@ class Raster:
   @property
   def coords(self):
     """Cell center coordinates"""
+    xulcenter = self.xllcenter + self.cell_size * self.nrows
     for i in range(self.ncols):
       for j in range(self.nrows):
-        x = self.xllcenter + i * self.cell_size
+        x = xulcenter - i * self.cell_size
         y = self.yllcenter + j * self.cell_size
         yield (x,y)
     
@@ -105,13 +106,13 @@ def nn_interpolation(list_pts_3d, j_nn):
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_nn['cellsize'])
 
-    list_points_2d = [(x,y) for x,y,z in list_pts_3d]
-    list_points_z = [(z) for x,y,z in list_pts_3d]
-    kdtree = scipy.spatial.KDTree(list_points_2d)
+    list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
+    list_pts_z = [(z) for x,y,z in list_pts_3d]
+    kdtree = scipy.spatial.KDTree(list_pts_2d)
 
     for i, coord in enumerate(raster.coords):
         _, index = kdtree.query(coord)
-        raster.values[i] = list_points_z[index]
+        raster.values[i] = list_pts_z[index]
 
     with open(j_nn["output-file"], 'w') as output:
         output.write(raster.to_ascii())
