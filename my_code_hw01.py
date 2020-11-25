@@ -1,11 +1,11 @@
 #-- my_code_hw01.py
 #-- hw01 GEO1015.2020
-#-- Guilherme Spinoza Andreo
-#-- 5383994
 #-- [YOUR NAME]
 #-- [YOUR STUDENT NUMBER] 
+#-- Ondrej Vesely
+#-- 5162130
 
-# hello
+
 #-- import outside the standard Python library are not allowed, just those:
 import math
 import numpy
