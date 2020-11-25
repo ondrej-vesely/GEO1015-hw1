@@ -10,17 +10,14 @@
 import math
 import numpy
 import scipy.spatial
-# import startin 
+import startin 
 #-----
 
 
 class BoundingBox:
     """A 2D bounding box"""
     
-    def __init__(self, points):
-        if len(points) == 0:
-            raise ValueError("Can't compute bounding box of empty list")
-        
+    def __init__(self, points):       
         self.minx, self.miny = float("inf"), float("inf")
         self.maxx, self.maxy = float("-inf"), float("-inf")
         for x, y, *_ in points:
@@ -40,9 +37,6 @@ class BoundingBox:
     @property
     def height(self):
         return self.maxy - self.miny
-    def __repr__(self):
-        return "BoundingBox(X: {} - {}, Y: {} - {})".format(
-            self.minx, self.maxx, self.miny, self.maxy)
 
 
 class Raster:
@@ -114,8 +108,6 @@ def nn_interpolation(list_pts_3d, j_nn):
 
 def idw_interpolation(list_pts_3d, j_idw):
     """
-    !!! TO BE COMPLETED !!!
-     
     Function that writes the output raster with IDW
      
     Input:
@@ -123,17 +115,8 @@ def idw_interpolation(list_pts_3d, j_idw):
         j_idw:       the parameters of the input for "idw"
     Output:
         returns the value of the area
- 
+
     """  
-    # print("cellsize:", j_idw['cellsize'])
-    # print("radius:", j_idw['radius'])
-
-    #-- to speed up the nearest neighbour us a kd-tree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
-    # kd = scipy.spatial.KDTree(list_pts)
-    # i = kd.query_ball_point(p, radius)
-
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_idw['cellsize'])
 
@@ -144,7 +127,7 @@ def idw_interpolation(list_pts_3d, j_idw):
     raster.values = []
     for center in raster.centers:
         # get samples in radius
-        samples = kdtree.query_ball_point(center, 10)
+        samples = kdtree.query_ball_point(center, j_idw['radius'])
         coords = [list_pts_2d[i] for i in samples]
         values = [list_pts_z[i] for i in samples]
         dists = [math.sqrt( (center[0]-c[0])**2 + (center[1]-c[1])**2 ) 
