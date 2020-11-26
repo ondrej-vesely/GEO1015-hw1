@@ -142,7 +142,7 @@ def idw_interpolation(list_pts_3d, j_idw):
             i = dists.index(0)
             raster.values.append(values[i])
             continue 
-        # otherwise business as usual
+        # calculate the weighted average
         weights = [1/d for d in dists]
         weights_norm = [w/sum(weights) for w in weights]
         result = sum([norm*z for norm, z in zip(weights_norm, values)])
@@ -177,7 +177,35 @@ def tin_interpolation(list_pts_3d, j_tin):
     # you are *not* allowed to use the function for the tin linear interpolation that I wrote for startin
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
+
+    bbox = BoundingBox(list_pts_3d)
+    raster = Raster(bbox, j_tin['cellsize'])
     
+    dt = startin.DT()
+    dt.insert(list_pts_3d)
+
+    raster.values = []
+    for center in raster.centers:
+        triangle = dt.locate(*center)
+        # catch outside on convex hull case
+        if not triangle:
+            raster.values.append(raster.no_data)
+            continue
+        # interpolate the triangle verts
+        v1, v2, v3 = [dt.get_point(i) for i in triangle]
+        # using barycentric coordinate weights https://codeplea.com/triangular-interpolation
+        w1top = (v2[1]-v3[1])*(center[0]-v3[0]) + (v3[0]-v2[0])*(center[1]-v3[1])
+        w2top = (v3[1]-v1[1])*(center[0]-v3[0]) + (v1[0]-v3[0])*(center[1]-v3[1])
+        bot = (v2[1]-v3[1])*(v1[0]-v3[0]) + (v3[0]-v2[0])*(v1[1]-v3[1])
+        w1 = w1top / bot
+        w2 = w2top / bot
+        w3 = 1 - w1 - w2
+        result = v1[2]*w1 + v2[2]*w2 + v3[2]*w3
+        raster.values.append(result)
+
+    with open(j_tin["output-file"], 'w') as output:
+        output.write(raster.to_ascii())
+
     print("File written to", j_tin['output-file'])
 
 
