@@ -58,8 +58,8 @@ class Raster:
     """Cell center coordinates"""
     xulcenter = self.xllcorner + self.cell_size/2
     yulcenter = self.yllcorner + self.cell_size/2 + self.cell_size*self.nrows
-    for i in range(self.ncols):
-      for j in range(self.nrows):
+    for i in range(self.nrows):
+      for j in range(self.ncols):
         x = xulcenter + j * self.cell_size
         y = yulcenter - i * self.cell_size
         yield (x,y)
