@@ -43,10 +43,10 @@ class Raster:
   """Simple raster based on ESRI ASCII schema"""
   
   def __init__(self, bbox, cell_size, no_data=-9999):
-    self.ncols = int(bbox.width // cell_size + 1)
-    self.nrows = int(bbox.height // cell_size + 1)
-    self.xllcenter = bbox.minx
-    self.yllcenter = bbox.miny
+    self.ncols = math.ceil(bbox.width / cell_size)
+    self.nrows = math.ceil(bbox.height / cell_size)
+    self.xllcorner = bbox.minx
+    self.yllcorner = bbox.miny
     self.cell_size = cell_size
     self.no_data = no_data
     
@@ -56,19 +56,20 @@ class Raster:
   @property
   def centers(self):
     """Cell center coordinates"""
-    xulcenter = self.xllcenter + self.cell_size * self.nrows
+    xulcenter = self.xllcorner + self.cell_size/2
+    yulcenter = self.yllcorner + self.cell_size/2 + self.cell_size*self.nrows
     for i in range(self.ncols):
       for j in range(self.nrows):
-        x = xulcenter - i * self.cell_size
-        y = self.yllcenter + j * self.cell_size
+        x = xulcenter + j * self.cell_size
+        y = yulcenter - i * self.cell_size
         yield (x,y)
     
   def to_ascii(self):
     rows = [
       "NCOLS %d" % self.ncols,
       "NROWS %d" % self.nrows,
-      "XLLCENTER %s" % self.xllcenter,
-      "YLLCENTER %s" % self.yllcenter,
+      "XLLCORNER %s" % self.xllcorner,
+      "YLLCORNER %s" % self.yllcorner,
       "CELLSIZE %s" % self.cell_size,
       "NODATA_VALUE %s" % self.no_data,
       ' '.join( (str(x) for x in self.values) )
