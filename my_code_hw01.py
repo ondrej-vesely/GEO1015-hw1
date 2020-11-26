@@ -88,17 +88,23 @@ def nn_interpolation(list_pts_3d, j_nn):
         returns the value of the area
  
     """  
-
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_nn['cellsize'])
 
     list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
     list_pts_z = [(z) for x,y,z in list_pts_3d]
     kdtree = scipy.spatial.KDTree(list_pts_2d)
+    dt = startin.DT()
+    dt.insert(list_pts_2d)
 
     raster.values = []
-    for coord in raster.centers:
-        _, i = kdtree.query(coord)
+    for center in raster.centers:
+        # catch outside on convex hull case
+        if not dt.locate(*center):
+            raster.values.append(raster.no_data)
+            continue
+        # get nearest neighbour
+        _, i = kdtree.query(center)
         raster.values.append(list_pts_z[i])
 
     with open(j_nn["output-file"], 'w') as output:
@@ -124,9 +130,15 @@ def idw_interpolation(list_pts_3d, j_idw):
     list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
     list_pts_z = [(z) for x,y,z in list_pts_3d]
     kdtree = scipy.spatial.KDTree(list_pts_2d)
+    dt = startin.DT()
+    dt.insert(list_pts_2d)
 
     raster.values = []
     for center in raster.centers:
+        # catch outside on convex hull case
+        if not dt.locate(*center):
+            raster.values.append(raster.no_data)
+            continue
         # get samples in radius
         samples = kdtree.query_ball_point(center, j_idw['radius'])
         coords = [list_pts_2d[i] for i in samples]
@@ -156,8 +168,6 @@ def idw_interpolation(list_pts_3d, j_idw):
 
 def tin_interpolation(list_pts_3d, j_tin):
     """
-    !!! TO BE COMPLETED !!!
-     
     Function that writes the output raster with linear in TIN interpolation
      
     Input:
@@ -167,17 +177,6 @@ def tin_interpolation(list_pts_3d, j_tin):
         returns the value of the area
  
     """  
-    #-- example to construct the DT with scipy
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Delaunay.html#scipy.spatial.Delaunay
-    # dt = scipy.spatial.Delaunay([])
-
-    #-- example to construct the DT with startin
-    # minimal docs: https://github.com/hugoledoux/startin_python/blob/master/docs/doc.md
-    # how to use it: https://github.com/hugoledoux/startin_python#a-full-simple-example
-    # you are *not* allowed to use the function for the tin linear interpolation that I wrote for startin
-    # you need to write your own code for this step
-    # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
-
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_tin['cellsize'])
     
