@@ -155,7 +155,7 @@ def idw_interpolation(list_pts_3d, j_idw):
             raster.values.append(values[i])
             continue 
         # calculate the weighted average
-        weights = [1/d for d in dists]
+        weights = [1/d**j_idw['power'] for d in dists]
         weights_norm = [w/sum(weights) for w in weights]
         result = sum([norm*z for norm, z in zip(weights_norm, values)])
         raster.values.append(result)
@@ -192,7 +192,8 @@ def tin_interpolation(list_pts_3d, j_tin):
             continue
         # interpolate the triangle verts
         v1, v2, v3 = [dt.get_point(i) for i in triangle]
-        # using barycentric coordinate weights https://codeplea.com/triangular-interpolation
+        # using barycentric coordinate weights 
+        # https://codeplea.com/triangular-interpolation
         w1top = (v2[1]-v3[1])*(center[0]-v3[0]) + (v3[0]-v2[0])*(center[1]-v3[1])
         w2top = (v3[1]-v1[1])*(center[0]-v3[0]) + (v1[0]-v3[0])*(center[1]-v3[1])
         bot = (v2[1]-v3[1])*(v1[0]-v3[0]) + (v3[0]-v2[0])*(v1[1]-v3[1])
