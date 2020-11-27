@@ -91,13 +91,15 @@ def nn_interpolation(list_pts_3d, j_nn):
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_nn['cellsize'])
 
-    # create dt, get its verts to solve duplicate point issue
+    # create dt
     dt = startin.DT()
     dt.insert(list_pts_3d)
+    # get its verts to solve duplicate point issue
     list_pts_3d = dt.all_vertices()[1:]
     list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
     list_pts_z = [(z) for x,y,z in list_pts_3d]
-    kdtree = scipy.spatial.KDTree(list_pts_2d)
+    # create kdtree
+    kdtree = scipy.spatial.KDTree(list_pts_2d, 50)
 
     raster.values = []
     for center in raster.centers:
@@ -129,13 +131,15 @@ def idw_interpolation(list_pts_3d, j_idw):
     bbox = BoundingBox(list_pts_3d)
     raster = Raster(bbox, j_idw['cellsize'])
 
-    # create dt, get its verts to solve duplicate sample issue
+    # create dt
     dt = startin.DT()
     dt.insert(list_pts_3d)
+    # get its verts to solve duplicate point issue
     list_pts_3d = dt.all_vertices()[1:]
     list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
     list_pts_z = [(z) for x,y,z in list_pts_3d]
-    kdtree = scipy.spatial.KDTree(list_pts_2d)
+    # create kdtree
+    kdtree = scipy.spatial.KDTree(list_pts_2d, 50)
 
     raster.values = []
     for center in raster.centers:
@@ -235,13 +239,15 @@ def kriging_interpolation(list_pts_3d, j_kriging):
     gamma = lambda x: _nugget+_sill*(1.0 - math.exp(-9.0*x*x/(_range**2)))
     dist = lambda a, b: math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 )    
 
-    # create dt, get its verts to solve duplicate sample issue
+    # create dt
     dt = startin.DT()
     dt.insert(list_pts_3d)
+    # get its verts to solve duplicate point issue
     list_pts_3d = dt.all_vertices()[1:]
     list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
     list_pts_z = [(z) for x,y,z in list_pts_3d]
-    kdtree = scipy.spatial.KDTree(list_pts_2d)
+    # create kdtree
+    kdtree = scipy.spatial.KDTree(list_pts_2d, 50)
                                                                                             
     raster.values = []
     for center in raster.centers:
