@@ -211,8 +211,6 @@ def tin_interpolation(list_pts_3d, j_tin):
 
 def kriging_interpolation(list_pts_3d, j_kriging):
     """
-    !!! TO BE COMPLETED !!!
-     
     Function that writes the output raster with ordinary kriging interpolation
      
     Input:
@@ -220,8 +218,74 @@ def kriging_interpolation(list_pts_3d, j_kriging):
         j_kriging:       the parameters of the input for "kriging"
     Output:
         returns the value of the area
- 
-    """  
-    
-    
+
+    """    
+    bbox = BoundingBox(list_pts_3d)
+    raster = Raster(bbox, j_kriging['cellsize'])
+
+    # best-fit variogram function (gaussian) 
+    _nugget = 0
+    _sill = 1400
+    _range = 300
+    gamma = lambda x: _nugget+_sill*(1.0 - math.exp(-9.0*x*x/(_range**2)))
+    dist = lambda a, b: math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 )    
+
+    list_pts_2d = [(x,y) for x,y,z in list_pts_3d]
+    list_pts_z = [(z) for x,y,z in list_pts_3d]
+    kdtree = scipy.spatial.KDTree(list_pts_2d)
+    dt = startin.DT()
+    dt.insert(list_pts_2d)
+                                                                                            
+    raster.values = []
+    for center in raster.centers:
+        # catch outside on convex hull case
+        if not dt.locate(*center):
+            raster.values.append(raster.no_data)
+            continue
+        # get samples in radius
+        samples = kdtree.query_ball_point(center, j_kriging['radius'])
+        coords = [list_pts_2d[i] for i in samples]
+        values = [list_pts_z[i] for i in samples]
+        dists = [math.sqrt( (center[0]-c[0])**2 + (center[1]-c[1])**2 ) 
+                for c in coords]
+        # catch no sample in radius case
+        if not samples:
+            raster.values.append(raster.no_data)
+            continue
+        # catch zero distance case
+        if 0 in dists:
+            i = dists.index(0)
+            raster.values.append(values[i])
+            continue        
+        # create covarience matrix for our variogram function
+        cov_mat = []
+        for i in coords:
+            row = []
+            for j in coords:
+                row.append(gamma(dist(i, j)))
+            cov_mat.append(row+[1])
+        cov_mat.append([1]*len(coords)+[0])
+        cov_mat = numpy.array(cov_mat)
+        # create d matrix for our variogram function
+        d_mat = []
+        for i in coords:
+            d_mat.append([gamma(dist(i, center))])
+        d_mat.append([1])
+        d_mat = numpy.array(d_mat)
+        # calculate weight matrix
+        try:
+            w_mat = numpy.matmul(numpy.linalg.inv(cov_mat), d_mat)
+        except:
+            # catch singular matrix case
+            raster.values.append(raster.no_data)
+            continue
+        # get normalized weights and result
+        weights = [w[0] for w in w_mat[:-1]]
+        weights_norm = [w/sum(weights) for w in weights]
+        result = sum([val*w for val, w in zip(values, weights_norm)])
+        raster.values.append(result)
+
+    with open(j_kriging["output-file"], 'w') as output:
+        output.write(raster.to_ascii())
+        
     print("File written to", j_kriging['output-file'])
